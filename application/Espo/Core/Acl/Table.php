@@ -168,24 +168,27 @@ class Table
         $this->cacheKey = 'acl/' . $this->user->id;
     }
 
+    /**
+     * @todo Clone.
+     */
     public function getMap() : StdClass
     {
         return $this->data;
     }
 
-    public function getScopeData(string $scope)
+    public function getScopeData(string $scope) : ScopeData
     {
-        if (isset($this->data->table->$scope)) {
-            $data = $this->data->table->$scope;
-
-            if (is_string($data)) {
-                return $this->getScopeData($data);
-            }
-
-            return $data;
+        if (!isset($this->data->table->$scope)) {
+            throw new Error("Could not get scope data for '{$scope}'.");
         }
 
-        return null;
+        $data = $this->data->table->$scope;
+
+        if (is_string($data)) {
+            return $this->getScopeData($data);
+        }
+
+        return ScopeData::fromRaw($data);
     }
 
     public function get(string $permission) : ?string

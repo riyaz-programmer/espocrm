@@ -30,31 +30,42 @@
 namespace Espo\Core\AclPortal;
 
 use Espo\Entities\User;
+
 use Espo\ORM\Entity;
+
+use Espo\Core\{
+    Acl\ScopeData,
+};
 
 trait Portal
 {
-    public function checkScope(User $user, $data, $action = null, Entity $entity = null, $entityAccessData = [])
-    {
-        if ($user->isAdmin()) {
-            return true;
-        }
+    public function checkScope(
+        User $user,
+        ScopeData $data,
+        ?string $action = null,
+        ?Entity $entity = null,
+        array $entityAccessData = []
+    ) : bool {
 
-        if (is_null($data)) {
+        /*if ($user->isAdmin()) {
+            return true;
+        }*/
+
+        /*if (is_null($data)) {
+            return false;
+        }*/
+
+        if ($data->isFalse()) {
             return false;
         }
 
-        if ($data === false) {
-            return false;
-        }
-
-        if ($data === true) {
+        if ($data->isTrue()) {
             return true;
         }
 
-        if (is_string($data)) {
+        /*if (is_string($data)) {
             return true;
-        }
+        }*/
 
         $isOwner = null;
 
@@ -78,13 +89,13 @@ trait Portal
             return true;
         }
 
-        if (!isset($data->$action)) {
+        /*if (!isset($data->$action)) {
             return false;
-        }
+        }*/
 
-        $value = $data->$action;
+        $value = $data->get($action);
 
-        if ($value === Table::LEVEL_ALL || $value === Table::LEVEL_YES || $value === true) {
+        if ($value === Table::LEVEL_ALL || $value === Table::LEVEL_YES) {
             return true;
         }
 
@@ -139,24 +150,19 @@ trait Portal
         return false;
     }
 
-    public function checkReadOnlyAccount(User $user, $data)
+    public function checkReadOnlyAccount(User $user, ScopeData $data) : bool
     {
-        if (empty($data) || !is_object($data) || !isset($data->read)) {
-            return false;
-        }
-
-        return $data->read === Table::LEVEL_ACCOUNT;
+        return $data->getRead() === Table::LEVEL_ACCOUNT;
     }
 
-    public function checkReadOnlyContact(User $user, $data)
+    public function checkReadOnlyContact(User $user, ScopeData $data) : bool
     {
-        if (empty($data) || !is_object($data) || !isset($data->read)) {
-            return false;
-        }
-
-        return $data->read === Table::LEVEL_CONTACT;
+        return $data->getRead() === Table::LEVEL_CONTACT;
     }
 
+    /**
+     * @return bool
+     */
     public function checkIsOwner(User $user, Entity $entity)
     {
         if ($entity->hasAttribute('createdById')) {
@@ -168,6 +174,9 @@ trait Portal
         return false;
     }
 
+    /**
+     * @return bool
+     */
     public function checkInAccount(User $user, Entity $entity)
     {
         $accountIdList = $user->getLinkMultipleIdList('accounts');
@@ -204,6 +213,9 @@ trait Portal
         return false;
     }
 
+    /**
+     * @return bool
+     */
     public function checkIsOwnContact(User $user, Entity $entity)
     {
         $contactId = $user->get('contactId');

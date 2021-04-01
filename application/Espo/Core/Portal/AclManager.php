@@ -131,10 +131,6 @@ class AclManager extends BaseAclManager
 
     public function checkReadOnlyAccount(User $user, string $scope) : bool
     {
-        if ($user->isAdmin()) {
-            return false;
-        }
-
         $data = $this->getTable($user)->getScopeData($scope);
 
         return $this->getImplementation($scope)->checkReadOnlyAccount($user, $data);
@@ -142,10 +138,6 @@ class AclManager extends BaseAclManager
 
     public function checkReadOnlyContact(User $user, string $scope) : bool
     {
-        if ($user->isAdmin()) {
-            return false;
-        }
-
         $data = $this->getTable($user)->getScopeData($scope);
 
         return $this->getImplementation($scope)->checkReadOnlyContact($user, $data);

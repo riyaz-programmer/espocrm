@@ -66,78 +66,70 @@ class Acl implements ScopeAcl, EntityAcl
         $this->config = $config;
     }
 
-    protected function getConfig()
+    protected function getConfig() : Config
     {
         return $this->config;
     }
 
-    protected function getEntityManager()
+    protected function getEntityManager() : EntityManager
     {
         return $this->entityManager;
     }
 
-    protected function getAclManager()
+    protected function getAclManager() : AclManager
     {
         return $this->aclManager;
     }
 
-    public function checkReadOnlyTeam(User $user, $data)
+    public function checkReadOnlyTeam(User $user, ScopeData $data) : bool
     {
-        if (empty($data) || !is_object($data) || !isset($data->read)) {
-            return false;
-        }
-
-        return $data->read === Table::LEVEL_TEAM;
+        return $data->getRead() === Table::LEVEL_TEAM;
     }
 
-    public function checkReadNo(User $user, $data)
+    public function checkReadNo(User $user, ScopeData $data) : bool
     {
-        if (empty($data) || !is_object($data) || !isset($data->read)) {
-            return false;
-        }
-
-        return $data->read === Table::LEVEL_NO;
+        return $data->getRead() === Table::LEVEL_NO;
     }
 
-    public function checkReadOnlyOwn(User $user, $data)
+    public function checkReadOnlyOwn(User $user, ScopeData $data) : bool
     {
-        if (empty($data) || !is_object($data) || !isset($data->read)) {
-            return false;
-        }
-
-        return $data->read === Table::LEVEL_OWN;
+        return $data->getRead() === Table::LEVEL_OWN;
     }
 
-    public function checkEntity(User $user, Entity $entity, $data, $action)
-    {
-        if ($user->isAdmin()) {
-            return true;
-        }
+    public function checkEntity(
+        User $user, Entity $entity, ScopeData $data, ?string $action = Table::ACTION_READ
+    ) : bool {
 
         return $this->checkScope($user, $data, $action, $entity);
     }
 
-    public function checkScope(User $user, $data, $action = null, Entity $entity = null, $entityAccessData = [])
-    {
-        if ($user->isAdmin()) {
-            return true;
-        }
+    public function checkScope(
+        User $user,
+        ScopeData $data,
+        ?string $action = null,
+        ?Entity $entity = null,
+        array $entityAccessData = []
+    ) : bool {
 
-        if (is_null($data)) {
+        /*if ($user->isAdmin()) {
+            return true;
+        }*/
+
+        /*if (is_null($data)) {
+            return false;
+        }*/
+
+        if ($data->isFalse()) {
             return false;
         }
 
-        if ($data === false) {
-            return false;
-        }
-
-        if ($data === true) {
+        if ($data->isTrue()) {
             return true;
         }
 
-        if (is_string($data)) {
+        /*if (is_string($data)) {
             return true;
-        }
+        }*/
 
         $isOwner = null;
 
@@ -155,17 +147,17 @@ class Acl implements ScopeAcl, EntityAcl
             return true;
         }
 
-        if (!isset($data->$action)) {
+        /*if (!isset($data->$action)) {
             return false;
-        }
+        }*/
 
-        $value = $data->$action;
+        $value = $data->get($action);
 
-        if ($value === Table::LEVEL_ALL || $value === Table::LEVEL_YES || $value === true) {
+        if ($value === Table::LEVEL_ALL || $value === Table::LEVEL_YES) {
             return true;
         }
 
-        if (!$value || $value === Table::LEVEL_NO) {
+        if ($value === Table::LEVEL_NO) {
             return false;
         }
 
@@ -197,6 +189,9 @@ class Acl implements ScopeAcl, EntityAcl
         return false;
     }
 
+    /**
+     * @return bool
+     */
     public function checkIsOwner(User $user, Entity $entity)
     {
         if ($entity->hasAttribute('assignedUserId')) {
@@ -223,6 +218,9 @@ class Acl implements ScopeAcl, EntityAcl
         return false;
     }
 
+    /**
+     * @return bool
+     */
     public function checkInTeam(User $user, Entity $entity)
     {
         $userTeamIdList = $user->getLinkMultipleIdList('teams');
@@ -246,6 +244,9 @@ class Acl implements ScopeAcl, EntityAcl
         return false;
     }
 
+    /**
+     * @return bool
+     */
     public function checkEntityDelete(User $user, Entity $entity, $data)
     {
         if ($user->isAdmin()) {
@@ -308,7 +309,7 @@ class Acl implements ScopeAcl, EntityAcl
         return true;
     }
 
-    public function getOwnerUserIdAttribute(Entity $entity)
+    public function getOwnerUserIdAttribute(Entity $entity) : ?string
     {
         if ($this->ownerUserIdAttribute) {
             return $this->ownerUserIdAttribute;
@@ -325,5 +326,7 @@ class Acl implements ScopeAcl, EntityAcl
         if ($entity->hasAttribute('createdById')) {
             return 'createdById';
         }
+
+        return null;
     }
 }

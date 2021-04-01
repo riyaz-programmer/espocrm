@@ -158,13 +158,9 @@ class AclManager
      */
     public function checkReadNo(User $user, string $scope) : bool
     {
-        if ($user->isAdmin()) {
-            return false;
-        }
-
         $data = $this->getTable($user)->getScopeData($scope);
 
-        return (bool) $this->getImplementation($scope)->checkReadNo($user, $data);
+        return $this->getImplementation($scope)->checkReadNo($user, $data);
     }
 
     /**
@@ -172,13 +168,9 @@ class AclManager
      */
     public function checkReadOnlyTeam(User $user, string $scope) : bool
     {
-        if ($user->isAdmin()) {
-            return false;
-        }
-
         $data = $this->getTable($user)->getScopeData($scope);
 
-        return (bool) $this->getImplementation($scope)->checkReadOnlyTeam($user, $data);
+        return $this->getImplementation($scope)->checkReadOnlyTeam($user, $data);
     }
 
     /**
@@ -186,13 +178,9 @@ class AclManager
      */
     public function checkReadOnlyOwn(User $user, string $scope) : bool
     {
-        if ($user->isAdmin()) {
-            return false;
-        }
-
         $data = $this->getTable($user)->getScopeData($scope);
 
-        return (bool) $this->getImplementation($scope)->checkReadOnlyOwn($user, $data);
+        return $this->getImplementation($scope)->checkReadOnlyOwn($user, $data);
     }
 
     /**
@@ -236,7 +224,7 @@ class AclManager
             return (bool) $impl->$methodName($user, $entity, $data);
         }
 
-        return (bool) $impl->checkEntity($user, $entity, $data, $action);
+        return $impl->checkEntity($user, $entity, $data, $action);
     }
 
     /**
@@ -262,7 +250,7 @@ class AclManager
     {
         $data = $this->getTable($user)->getScopeData($scope);
 
-        return (bool) $this->getImplementation($scope)->checkScope($user, $data, $action);
+        return $this->getImplementation($scope)->checkScope($user, $data, $action);
     }
 
     /**
