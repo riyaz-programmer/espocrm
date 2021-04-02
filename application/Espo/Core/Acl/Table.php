@@ -39,6 +39,7 @@ use Espo\Core\{
     Utils\Metadata,
     Utils\FieldUtil,
     Utils\DataCache,
+    Utils\ObjectUtil,
 };
 
 use StdClass;
@@ -168,12 +169,9 @@ class Table
         $this->cacheKey = 'acl/' . $this->user->id;
     }
 
-    /**
-     * @todo Clone.
-     */
     public function getMap() : StdClass
     {
-        return $this->data;
+        return ObjectUtil::clone($this->data);
     }
 
     public function getScopeData(string $scope) : ScopeData
