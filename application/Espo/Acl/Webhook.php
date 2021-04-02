@@ -33,7 +33,10 @@ use Espo\Entities\User as EntityUser;
 
 use Espo\ORM\Entity;
 
-use Espo\Core\Acl\Acl;
+use Espo\Core\{
+    Acl\Acl,
+    Acl\ScopeData,
+};
 
 class Webhook extends Acl
 {
@@ -42,13 +45,13 @@ class Webhook extends Acl
         return $user->id === $entity->get('userId') && $user->isApi();
     }
 
-    public function checkEntityCreate(EntityUser $user, Entity $entity, $data)
+    public function checkEntityCreate(EntityUser $user, Entity $entity, ScopeData $data): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        if (!$data) {
+        if ($data->isFalse()) {
             return false;
         }
 
@@ -59,13 +62,13 @@ class Webhook extends Acl
         return false;
     }
 
-    public function checkEntityRead(EntityUser $user, Entity $entity, $data)
+    public function checkEntityRead(EntityUser $user, Entity $entity, ScopeData $data): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        if (!$data) {
+        if ($data->isFalse()) {
             return false;
         }
 
@@ -76,13 +79,13 @@ class Webhook extends Acl
         return false;
     }
 
-    public function checkEntityDelete(EntityUser $user, Entity $entity, $data)
+    public function checkEntityDelete(EntityUser $user, Entity $entity, ScopeData $data): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        if (!$data) {
+        if ($data->isFalse()) {
             return false;
         }
 
@@ -93,13 +96,13 @@ class Webhook extends Acl
         return false;
     }
 
-    public function checkEntityEdit(EntityUser $user, Entity $entity, $data)
+    public function checkEntityEdit(EntityUser $user, Entity $entity, ScopeData $data): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        if (!$data) {
+        if ($data->isFalse()) {
             return false;
         }
 

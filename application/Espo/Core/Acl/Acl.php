@@ -220,10 +220,7 @@ class Acl implements ScopeAcl, EntityAcl
         return false;
     }
 
-    /**
-     * @return bool
-     */
-    public function checkEntityDelete(User $user, Entity $entity, $data)
+    public function checkEntityDelete(User $user, Entity $entity, ScopeData $data) : bool
     {
         if ($user->isAdmin()) {
             return true;
@@ -233,11 +230,7 @@ class Acl implements ScopeAcl, EntityAcl
             return true;
         }
 
-        if (!is_object($data)) {
-            return false;
-        }
-
-        if ($data->edit === Table::LEVEL_NO && $data->create === Table::LEVEL_NO) {
+        if ($data->getEdit() === Table::LEVEL_NO && $data->getCreate() === Table::LEVEL_NO) {
             return false;
         }
 

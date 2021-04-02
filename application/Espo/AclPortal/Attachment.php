@@ -29,53 +29,57 @@
 
 namespace Espo\AclPortal;
 
-use \Espo\Entities\User as EntityUser;
-use \Espo\ORM\Entity;
+use Espo\Entities\User as EntityUser;
+use Espo\ORM\Entity;
 
-class Attachment extends \Espo\Core\AclPortal\Base
+use Espo\Core\{
+    Acl\ScopeData,
+    Acl\Table,
+    AclPortal\Acl as Acl,
+};
+
+class Attachment extends Acl
 {
-    public function checkEntityRead(EntityUser $user, Entity $entity, $data)
+    public function checkEntityRead(EntityUser $user, Entity $entity, ScopeData $data): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
         if ($entity->get('parentType') === 'Settings') {
             return true;
         }
 
         $parent = null;
         $hasParent = false;
+
         if ($entity->get('parentId') && $entity->get('parentType')) {
             $hasParent = true;
-            $parent = $this->getEntityManager()->getEntity($entity->get('parentType'), $entity->get('parentId'));
-        } else if ($entity->get('relatedId') && $entity->get('relatedType')) {
+
+            $parent = $this->entityManager->getEntity($entity->get('parentType'), $entity->get('parentId'));
+        }
+        else if ($entity->get('relatedId') && $entity->get('relatedType')) {
             $hasParent = true;
-            $parent = $this->getEntityManager()->getEntity($entity->get('relatedType'), $entity->get('relatedId'));
+
+            $parent = $this->entityManager->getEntity($entity->get('relatedType'), $entity->get('relatedId'));
         }
 
-        if ($hasParent) {
-            if ($parent) {
-                if ($parent->getEntityType() === 'Note') {
-                    if ($parent->get('parentId') && $parent->get('parentType')) {
-                        $parentOfParent = $this->getEntityManager()->getEntity($parent->get('parentType'), $parent->get('parentId'));
-                        if ($parentOfParent && $this->getAclManager()->checkEntity($user, $parentOfParent)) {
-                            return true;
-                        }
-                    } else {
-                        return true;
-                    }
-                } else {
-                    if ($this->getAclManager()->checkEntity($user, $parent)) {
-                        return true;
-                    }
-                }
+        if (!$hasParent) {
+            return false; // check this
+        }
+
+        if ($parent->getEntityType() === 'Note') {
+            if (!$parent->get('parentId') || !$parent->get('parentType')) {
+                return false; // check this
             }
-        } else {
+
+            $parentOfParent = $this->entityManager->getEntity($parent->get('parentType'), $parent->get('parentId'));
+
+            if ($parentOfParent && $this->aclManager->checkEntity($user, $parentOfParent)) {
+                return true;
+            }
+        }
+        else if ($this->aclManager->checkEntity($user, $parent)) {
             return true;
         }
 
-        if ($this->checkEntity($user, $entity, $data, 'read')) {
+        if ($this->checkEntity($user, $entity, $data, Table::ACTION_READ)) {
             return true;
         }
 
@@ -84,10 +88,10 @@ class Attachment extends \Espo\Core\AclPortal\Base
 
     public function checkIsOwner(EntityUser $user, Entity $entity)
     {
-        if ($user->id === $entity->get('createdById')) {
+        if ($user->getId() === $entity->get('createdById')) {
             return true;
         }
+
         return false;
     }
 }
-

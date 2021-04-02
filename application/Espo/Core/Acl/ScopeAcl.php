@@ -33,5 +33,5 @@ use Espo\Entities\User;
 
 interface ScopeAcl
 {
-    public function checkScope(User $user, ScopeData $data, ?string $action = null) : bool;
+    public function checkScope(User $user, ScopeData $data, ?string $action = null): bool;
 }

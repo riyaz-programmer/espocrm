@@ -209,7 +209,7 @@ class AclManager
         $methodName = 'checkEntity' . ucfirst($action);
 
         if (method_exists($impl, $methodName)) {
-            return (bool) $impl->$methodName($user, $entity, $data);
+            return $impl->$methodName($user, $entity, $data);
         }
 
         return $impl->checkEntity($user, $entity, $data, $action);

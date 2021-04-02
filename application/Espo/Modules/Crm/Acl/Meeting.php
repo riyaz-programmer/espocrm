@@ -33,24 +33,24 @@ use Espo\Entities\User;
 
 use Espo\ORM\Entity;
 
-use Espo\Core\Acl\Acl;
+use Espo\Core\{
+    Acl\Acl,
+    Acl\ScopeData,
+    Acl\Table,
+};
 
 class Meeting extends Acl
 {
     protected $ownerUserIdAttribute = 'usersIds';
 
-    public function checkEntityRead(User $user, Entity $entity, $data)
+    public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
     {
-        if ($this->checkEntity($user, $entity, $data, 'read')) {
+        if ($this->checkEntity($user, $entity, $data, Table::ACTION_READ)) {
             return true;
         }
 
-        if (!$data) {
-            return false;
-        }
-
-        if ($data->read === 'own' || $data->read === 'team') {
-            if ($entity->hasLinkMultipleId('users', $user->id)) {
+        if ($data->getRead() === Table::LEVEL_OWN || $data->getRead() === Table::LEVEL_TEAM) {
+            if ($entity->hasLinkMultipleId('users', $user->getId())) {
                 return true;
             }
         }
