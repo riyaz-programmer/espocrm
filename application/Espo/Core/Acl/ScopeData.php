@@ -50,7 +50,7 @@ class ScopeData
     /**
      * Get a raw value.
      *
-     * @return StdClass|boo
+     * @return StdClass|bool
      */
     public function getRaw()
     {
