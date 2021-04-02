@@ -45,13 +45,21 @@ use Espo\Core\{
  */
 class Acl implements ScopeAcl, EntityAcl
 {
+    protected const ATTR_CREATED_BY_ID = 'createdById';
+
+    protected const ATTR_ASSIGNED_USER_ID = 'assignedUserId';
+
+    protected const ATTR_ASSIGNED_USERS_IDS = 'assignedUsersIds';
+
+    protected const FIELD_ASSIGNED_USERS = 'assignedUsers';
+
     protected $scope;
 
     protected $ownerUserIdAttribute = null;
 
     protected $allowDeleteCreatedThresholdPeriod = '24 hours';
 
-    protected $entityManager;
+    protected $checkIsOwnerentityManager;
 
     protected $aclManager;
 
@@ -284,16 +292,16 @@ class Acl implements ScopeAcl, EntityAcl
             return $this->ownerUserIdAttribute;
         }
 
-        if ($entity->hasLinkMultipleField('assignedUsers')) {
-            return 'assignedUsersIds';
+        if ($entity->hasLinkMultipleField(self::FIELD_ASSIGNED_USERS)) {
+            return self::ATTR_ASSIGNED_USERS_IDS;
         }
 
-        if ($entity->hasAttribute('assignedUserId')) {
-            return 'assignedUserId';
+        if ($entity->hasAttribute(self::ATTR_ASSIGNED_USER_ID)) {
+            return self::ATTR_ASSIGNED_USER_ID;
         }
 
-        if ($entity->hasAttribute('createdById')) {
-            return 'createdById';
+        if ($entity->hasAttribute(self::ATTR_CREATED_BY_ID)) {
+            return self::ATTR_CREATED_BY_ID;
         }
 
         return null;
