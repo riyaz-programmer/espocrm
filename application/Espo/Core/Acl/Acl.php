@@ -70,6 +70,16 @@ class Acl implements ScopeAcl, EntityAcl
         $this->scope = $scope;
     }
 
+    public function checkEntity(User $user, Entity $entity, ScopeData $data, string $action = Table::ACTION_READ): bool
+    {
+        return $this->checkScopeInternal($user, $data, $action, $entity);
+    }
+
+    public function checkScope(User $user, ScopeData $data, ?string $action = null) : bool
+    {
+        return $this->checkScopeInternal($user, $data, $action);
+    }
+
     public function checkReadOnlyTeam(User $user, ScopeData $data) : bool
     {
         return $data->getRead() === Table::LEVEL_TEAM;
@@ -83,21 +93,6 @@ class Acl implements ScopeAcl, EntityAcl
     public function checkReadOnlyOwn(User $user, ScopeData $data) : bool
     {
         return $data->getRead() === Table::LEVEL_OWN;
-    }
-
-    public function checkEntity(
-        User $user,
-        Entity $entity,
-        ScopeData $data,
-        string $action = Table::ACTION_READ
-    ) : bool {
-
-        return $this->checkScopeInternal($user, $data, $action, $entity);
-    }
-
-    public function checkScope(User $user, ScopeData $data, ?string $action = null) : bool
-    {
-        return $this->checkScopeInternal($user, $data, $action);
     }
 
     protected function checkScopeInternal(

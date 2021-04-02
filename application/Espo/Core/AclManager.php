@@ -83,6 +83,8 @@ class AclManager
 
     /**
      * Get an ACL implementation for a scope.
+     *
+     * @return ScopeAcl|EntityAcl
      */
     public function getImplementation(string $scope) : ScopeAcl
     {
