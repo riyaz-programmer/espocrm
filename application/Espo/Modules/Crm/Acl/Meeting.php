@@ -33,9 +33,9 @@ use Espo\Entities\User;
 
 use Espo\ORM\Entity;
 
-use Espo\Core\Acl\Base;
+use Espo\Core\Acl\Acl;
 
-class Meeting extends Base
+class Meeting extends Acl
 {
     protected $ownerUserIdAttribute = 'usersIds';
 

@@ -31,18 +31,22 @@ namespace Espo\Core\Portal;
 
 use Espo\ORM\Entity;
 
-use Espo\Entities\User;
-use Espo\Entities\Portal;
+use Espo\Entities\{
+    User,
+    Portal,
+};
 
 use Espo\Core\{
-    Exceptions\Error,
     AclPortal\Table as Table,
     AclPortal\Acl as BasePortalAcl,
-    AclPortal\PortalScopeAcl,
+    AclPortal\AclFactory as PortalAclFactory,
     Acl\ScopeAcl,
+    Acl\GlobalRestrictonFactory,
     Acl\Table as TableBase,
     Portal\Acl as UserAclWrapper,
     AclManager as BaseAclManager,
+    InjectableFactory,
+    ORM\EntityManager,
 };
 
 use StdClass;
@@ -52,49 +56,36 @@ class AclManager extends BaseAclManager
 {
     protected $tableClassName = Table::class;
 
-    private $mainManager = null;
-
-    private $portal = null;
-
     protected $userAclClassName = UserAclWrapper::class;
 
     protected $baseImplementationClassName = BasePortalAcl::class;
 
+    private $mainManager = null;
+
+    private $portal = null;
+
+    public function __construct(
+        InjectableFactory $injectableFactory,
+        EntityManager $entityManager,
+        PortalAclFactory $aclFactory,
+        GlobalRestrictonFactory $globalRestrictonFactory,
+        BaseAclManager $mainManager
+    ) {
+        $this->injectableFactory = $injectableFactory;
+        $this->entityManager = $entityManager;
+        $this->aclFactory = $aclFactory;
+        $this->mainManager = $mainManager;
+
+        $this->globalRestricton = $globalRestrictonFactory->create();
+    }
+
     public function getImplementation(string $scope) : ScopeAcl
     {
-        if (empty($this->implementationHashMap[$scope])) {
-            $className = $this->classFinder->find('AclPortal', $scope);
-
-            if (!$className) {
-                $className = $this->baseImplementationClassName;
-            }
-
-            if (!class_exists($className)) {
-                throw new Error("{$className} does not exist.");
-            }
-
-            $acl = $this->injectableFactory->createWith($className, [
-                'scope' => $scope,
-            ]);
-
-            $this->implementationHashMap[$scope] = $acl;
-
-            if (!$acl instanceof PortalScopeAcl) {
-                throw new Error("Portal\AclManager: Implementation should be instance of PortalScopeAcl.");
-            }
+        if (!array_key_exists($scope, $this->implementationHashMap)) {
+            $this->implementationHashMap[$scope] = $this->aclFactory->create($scope);
         }
 
         return $this->implementationHashMap[$scope];
-    }
-
-    public function setMainManager(BaseAclManager $mainManager) : void
-    {
-        $this->mainManager = $mainManager;
-    }
-
-    protected function getMainManager() : BaseAclManager
-    {
-        return $this->mainManager;
     }
 
     public function setPortal(Portal $portal) : void
@@ -156,7 +147,7 @@ class AclManager extends BaseAclManager
     public function getMap(User $user) : StdClass
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->getMap($user);
+            return $this->mainManager->getMap($user);
         }
 
         return parent::getMap($user);
@@ -165,7 +156,7 @@ class AclManager extends BaseAclManager
     public function getLevel(User $user, string $scope, string $action) : string
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->getLevel($user, $scope, $action);
+            return $this->mainManager->getLevel($user, $scope, $action);
         }
 
         return parent::getLevel($user, $scope, $action);
@@ -174,7 +165,7 @@ class AclManager extends BaseAclManager
     public function get(User $user, string $permission) : ?string
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->get($user, $permission);
+            return $this->mainManager->get($user, $permission);
         }
 
         return parent::get($user, $permission);
@@ -185,7 +176,7 @@ class AclManager extends BaseAclManager
         if ($this->checkUserIsNotPortal($user)) {
             $data = $this->getTable($user)->getScopeData($scope);
 
-            return $this->getMainManager()->checkReadOnlyTeam($user, $data);
+            return $this->mainManager->checkReadOnlyTeam($user, $data);
         }
 
         return parent::checkReadOnlyTeam($user, $scope);
@@ -196,7 +187,7 @@ class AclManager extends BaseAclManager
         if ($this->checkUserIsNotPortal($user)) {
             $data = $this->getTable($user)->getScopeData($scope);
 
-            return $this->getMainManager()->checkReadNo($user, $data);
+            return $this->mainManager->checkReadNo($user, $data);
         }
 
         return parent::checkReadNo($user, $scope);
@@ -207,7 +198,7 @@ class AclManager extends BaseAclManager
         if ($this->checkUserIsNotPortal($user)) {
             $data = $this->getTable($user)->getScopeData($scope);
 
-            return $this->getMainManager()->checkReadOnlyOwn($user, $data);
+            return $this->mainManager->checkReadOnlyOwn($user, $data);
         }
 
         return parent::checkReadOnlyOwn($user, $scope);
@@ -216,7 +207,7 @@ class AclManager extends BaseAclManager
     public function check(User $user, $subject, ?string $action = null) : bool
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->check($user, $subject, $action);
+            return $this->mainManager->check($user, $subject, $action);
         }
 
         return parent::check($user, $subject, $action);
@@ -225,7 +216,7 @@ class AclManager extends BaseAclManager
     public function checkEntity(User $user, Entity $entity, string $action = Table::ACTION_READ) : bool
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->checkEntity($user, $entity, $action);
+            return $this->mainManager->checkEntity($user, $entity, $action);
         }
 
         return parent::checkEntity($user, $entity, $action);
@@ -234,7 +225,7 @@ class AclManager extends BaseAclManager
     public function checkIsOwner(User $user, Entity $entity) : bool
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->checkIsOwner($user, $entity);
+            return $this->mainManager->checkIsOwner($user, $entity);
         }
 
         return parent::checkIsOwner($user, $entity);
@@ -243,7 +234,7 @@ class AclManager extends BaseAclManager
     public function checkInTeam(User $user, Entity $entity) : bool
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->checkInTeam($user, $entity);
+            return $this->mainManager->checkInTeam($user, $entity);
         }
 
         return parent::checkInTeam($user, $entity);
@@ -252,7 +243,7 @@ class AclManager extends BaseAclManager
     public function checkScope(User $user, string $scope, ?string $action = null) : bool
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->checkScope($user, $scope, $action);
+            return $this->mainManager->checkScope($user, $scope, $action);
         }
 
         return parent::checkScope($user, $scope, $action);
@@ -261,29 +252,35 @@ class AclManager extends BaseAclManager
     public function checkUser(User $user, string $permission, User $entity) : bool
     {
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->checkUser($user, $permission, $entity);
+            return $this->mainManager->checkUser($user, $permission, $entity);
         }
 
         return parent::checkUser($user, $permission, $entity);
     }
 
     public function getScopeForbiddenAttributeList(
-        User $user, string $scope, string $action = Table::ACTION_READ, string $thresholdLevel = Table::LEVEL_NO
+        User $user,
+        string $scope,
+        string $action = Table::ACTION_READ,
+        string $thresholdLevel = Table::LEVEL_NO
     ) : array {
 
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->getScopeForbiddenAttributeList($user, $scope, $action, $thresholdLevel);
+            return $this->mainManager->getScopeForbiddenAttributeList($user, $scope, $action, $thresholdLevel);
         }
 
         return parent::getScopeForbiddenAttributeList($user, $scope, $action, $thresholdLevel);
     }
 
     public function getScopeForbiddenFieldList(
-        User $user, string $scope, string $action = Table::ACTION_READ, string $thresholdLevel = Table::LEVEL_NO
+        User $user,
+        string $scope,
+        string $action = Table::ACTION_READ,
+        string $thresholdLevel = Table::LEVEL_NO
     ) : array {
 
         if ($this->checkUserIsNotPortal($user)) {
-            return $this->getMainManager()->getScopeForbiddenFieldList($user, $scope, $action, $thresholdLevel);
+            return $this->mainManager->getScopeForbiddenFieldList($user, $scope, $action, $thresholdLevel);
         }
 
         return parent::getScopeForbiddenFieldList($user, $scope, $action, $thresholdLevel);

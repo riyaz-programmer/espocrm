@@ -57,28 +57,17 @@ class Acl implements ScopeAcl, EntityAcl
 
     protected $config;
 
-    public function __construct(string $scope, EntityManager $entityManager, AclManager $aclManager, Config $config)
-    {
-        $this->scope = $scope;
-
+    public function __construct(
+        EntityManager $entityManager,
+        AclManager $aclManager,
+        Config $config,
+        string $scope = null
+    ) {
         $this->entityManager = $entityManager;
         $this->aclManager = $aclManager;
         $this->config = $config;
-    }
 
-    protected function getConfig() : Config
-    {
-        return $this->config;
-    }
-
-    protected function getEntityManager() : EntityManager
-    {
-        return $this->entityManager;
-    }
-
-    protected function getAclManager() : AclManager
-    {
-        return $this->aclManager;
+        $this->scope = $scope;
     }
 
     public function checkReadOnlyTeam(User $user, ScopeData $data) : bool
@@ -97,27 +86,27 @@ class Acl implements ScopeAcl, EntityAcl
     }
 
     public function checkEntity(
-        User $user, Entity $entity, ScopeData $data, ?string $action = Table::ACTION_READ
+        User $user,
+        Entity $entity,
+        ScopeData $data,
+        string $action = Table::ACTION_READ
     ) : bool {
 
-        return $this->checkScope($user, $data, $action, $entity);
+        return $this->checkScopeInternal($user, $data, $action, $entity);
     }
 
-    public function checkScope(
+    public function checkScope(User $user, ScopeData $data, ?string $action = null) : bool
+    {
+        return $this->checkScopeInternal($user, $data, $action);
+    }
+
+    protected function checkScopeInternal(
         User $user,
         ScopeData $data,
         ?string $action = null,
         ?Entity $entity = null,
         array $entityAccessData = []
     ) : bool {
-
-        /*if ($user->isAdmin()) {
-            return true;
-        }*/
-
-        /*if (is_null($data)) {
-            return false;
-        }*/
 
         if ($data->isFalse()) {
             return false;
@@ -126,10 +115,6 @@ class Acl implements ScopeAcl, EntityAcl
         if ($data->isTrue()) {
             return true;
         }
-
-        /*if (is_string($data)) {
-            return true;
-        }*/
 
         $isOwner = null;
 
@@ -144,12 +129,12 @@ class Acl implements ScopeAcl, EntityAcl
         }
 
         if (is_null($action)) {
-            return true;
-        }
+            if ($data->hasNotNo()) {
+                return true;
+            }
 
-        /*if (!isset($data->$action)) {
             return false;
-        }*/
+        }
 
         $value = $data->get($action);
 
@@ -195,17 +180,13 @@ class Acl implements ScopeAcl, EntityAcl
     public function checkIsOwner(User $user, Entity $entity)
     {
         if ($entity->hasAttribute('assignedUserId')) {
-            if ($entity->has('assignedUserId')) {
-                if ($user->id === $entity->get('assignedUserId')) {
-                    return true;
-                }
+            if ($entity->has('assignedUserId') && $user->id === $entity->get('assignedUserId')) {
+                return true;
             }
         }
         else if ($entity->hasAttribute('createdById')) {
-            if ($entity->has('createdById')) {
-                if ($user->id === $entity->get('createdById')) {
-                    return true;
-                }
+            if ($entity->has('createdById') && $user->id === $entity->get('createdById')) {
+                return true;
             }
         }
 
@@ -328,5 +309,29 @@ class Acl implements ScopeAcl, EntityAcl
         }
 
         return null;
+    }
+
+    /**
+     * @deprecated Use `$this->config`.
+     */
+    protected function getConfig() : Config
+    {
+        return $this->config;
+    }
+
+    /**
+     * @deprecated Use `$this->entityManager`.
+     */
+    protected function getEntityManager() : EntityManager
+    {
+        return $this->entityManager;
+    }
+
+    /**
+     * @deprecated Use `$this->aclManager`.
+     */
+    protected function getAclManager() : AclManager
+    {
+        return $this->aclManager;
     }
 }

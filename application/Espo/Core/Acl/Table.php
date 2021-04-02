@@ -179,7 +179,7 @@ class Table
     public function getScopeData(string $scope) : ScopeData
     {
         if (!isset($this->data->table->$scope)) {
-            throw new Error("Could not get scope data for '{$scope}'.");
+            return ScopeData::fromRaw(false);
         }
 
         $data = $this->data->table->$scope;

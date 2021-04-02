@@ -29,16 +29,13 @@
 
 namespace Espo\Core;
 
-use Espo\Core\Exceptions\Error;
-
 use Espo\ORM\Entity;
 
 use Espo\Entities\User;
 
 use Espo\Core\{
-    Utils\ClassFinder,
     ORM\EntityManager,
-    Acl\Acl as BaseAcl,
+    Acl\AclFactory,
     Acl\ScopeAcl,
     Acl\GlobalRestrictonFactory,
     Acl\GlobalRestricton,
@@ -53,7 +50,7 @@ use StdClass;
  */
 class AclManager
 {
-    private $implementationHashMap = [];
+    protected $implementationHashMap = [];
 
     private $tableHashMap = [];
 
@@ -61,47 +58,36 @@ class AclManager
 
     protected $userAclClassName = UserAclWrapper::class;
 
-    protected $baseImplementationClassName = BaseAcl::class;
-
-    protected $globalRestricton;
+    protected const PERMISSION_ASSIGNMENT = 'assignment';
 
     protected $injectableFactory;
 
-    protected $classFinder;
-
     protected $entityManager;
+
+    protected $aclFactory;
+
+    protected $globalRestricton;
 
     public function __construct(
         InjectableFactory $injectableFactory,
-        ClassFinder $classFinder,
         EntityManager $entityManager,
+        AclFactory $aclFactory,
         GlobalRestrictonFactory $globalRestrictonFactory
     ) {
         $this->injectableFactory = $injectableFactory;
-        $this->classFinder = $classFinder;
         $this->entityManager = $entityManager;
+        $this->aclFactory = $aclFactory;
 
         $this->globalRestricton = $globalRestrictonFactory->create();
     }
 
+    /**
+     * Get an ACL implementation for a scope.
+     */
     public function getImplementation(string $scope) : ScopeAcl
     {
-        if (empty($this->implementationHashMap[$scope])) {
-            $className = $this->classFinder->find('Acl', $scope);
-
-            if (!$className) {
-                $className = $this->baseImplementationClassName;
-            }
-
-            if (!class_exists($className)) {
-                throw new Error("{$className} does not exist.");
-            }
-
-            $acl = $this->injectableFactory->createWith($className, [
-                'scope' => $scope,
-            ]);
-
-            $this->implementationHashMap[$scope] = $acl;
+        if (!array_key_exists($scope, $this->implementationHashMap)) {
+            $this->implementationHashMap[$scope] = $this->aclFactory->create($scope);
         }
 
         return $this->implementationHashMap[$scope];
@@ -109,13 +95,13 @@ class AclManager
 
     protected function getTable(User $user) : Table
     {
-        $key = $user->id;
+        $key = $user->getId();
 
-        if (empty($key)) {
+        if (!$key) {
             $key = spl_object_hash($user);
         }
 
-        if (empty($this->tableHashMap[$key])) {
+        if (!array_key_exists($key, $this->tableHashMap)) {
             $this->tableHashMap[$key] = $this->injectableFactory->createWith($this->tableClassName, [
                 'user' => $user,
             ]);
@@ -326,7 +312,10 @@ class AclManager
      * Get attributes forbidden for a user.
      */
     public function getScopeForbiddenAttributeList(
-        User $user, string $scope, string $action = Table::ACTION_READ, string $thresholdLevel = Table::LEVEL_NO
+        User $user,
+        string $scope,
+        string $action = Table::ACTION_READ,
+        string $thresholdLevel = Table::LEVEL_NO
     ) : array {
 
         $list = [];
@@ -338,7 +327,10 @@ class AclManager
         if ($thresholdLevel === Table::LEVEL_NO) {
             $list = array_merge(
                 $list,
-                $this->getScopeRestrictedAttributeList($scope, $this->getGlobalRestrictionTypeList($user, $action))
+                $this->getScopeRestrictedAttributeList(
+                    $scope,
+                    $this->getGlobalRestrictionTypeList($user, $action)
+                )
             );
 
             $list = array_values($list);
@@ -351,7 +343,10 @@ class AclManager
      * Get fields forbidden for a user.
      */
     public function getScopeForbiddenFieldList(
-        User $user, string $scope, string $action = Table::ACTION_READ, string $thresholdLevel = Table::LEVEL_NO
+        User $user,
+        string $scope,
+        string $action = Table::ACTION_READ,
+        string $thresholdLevel = Table::LEVEL_NO
     ) : array {
 
         $list = [];
@@ -363,7 +358,10 @@ class AclManager
         if ($thresholdLevel === Table::LEVEL_NO) {
             $list = array_merge(
                 $list,
-                $this->getScopeRestrictedFieldList($scope, $this->getGlobalRestrictionTypeList($user, $action))
+                $this->getScopeRestrictedFieldList(
+                    $scope,
+                    $this->getGlobalRestrictionTypeList($user, $action)
+                )
             );
 
             $list = array_values($list);
@@ -376,7 +374,10 @@ class AclManager
      * Get links forbidden for a user.
      */
     public function getScopeForbiddenLinkList(
-        User $user, string $scope, string $action = Table::ACTION_READ, string $thresholdLevel = Table::LEVEL_NO
+        User $user,
+        string $scope,
+        string $action = Table::ACTION_READ,
+        string $thresholdLevel = Table::LEVEL_NO
     ) : array {
 
         $list = [];
@@ -384,7 +385,10 @@ class AclManager
         if ($thresholdLevel === Table::LEVEL_NO) {
             $list = array_merge(
                 $list,
-                $this->getScopeRestrictedLinkList($scope, $this->getGlobalRestrictionTypeList($user, $action))
+                $this->getScopeRestrictedLinkList(
+                    $scope,
+                    $this->getGlobalRestrictionTypeList($user, $action)
+                )
             );
 
             $list = array_values($list);
@@ -423,7 +427,11 @@ class AclManager
         if ($permission === Table::LEVEL_TEAM) {
             $teamIdList = $user->getLinkMultipleIdList('teams');
 
-            if (!$this->entityManager->getRepository('User')->checkBelongsToAnyOfTeams($userId, $teamIdList)) {
+            if (
+                !$this->entityManager
+                    ->getRepository('User')
+                    ->checkBelongsToAnyOfTeams($userId, $teamIdList)
+            ) {
                 return false;
             }
         }
@@ -438,7 +446,7 @@ class AclManager
      */
     public function checkAssignmentPermission(User $user, $target) : bool
     {
-        return $this->checkUserPermission($user, $target, 'assignment');
+        return $this->checkUserPermission($user, $target, self::PERMISSION_ASSIGNMENT);
     }
 
     /**
@@ -447,6 +455,7 @@ class AclManager
     public function createUserAcl(User $user) : UserAclWrapper
     {
         $className = $this->userAclClassName;
+
         $acl = new $className($this, $user);
 
         return $acl;

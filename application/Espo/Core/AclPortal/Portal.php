@@ -39,21 +39,13 @@ use Espo\Core\{
 
 trait Portal
 {
-    public function checkScope(
+    protected function checkScopeInternal(
         User $user,
         ScopeData $data,
         ?string $action = null,
         ?Entity $entity = null,
         array $entityAccessData = []
     ) : bool {
-
-        /*if ($user->isAdmin()) {
-            return true;
-        }*/
-
-        /*if (is_null($data)) {
-            return false;
-        }*/
 
         if ($data->isFalse()) {
             return false;
@@ -62,10 +54,6 @@ trait Portal
         if ($data->isTrue()) {
             return true;
         }
-
-        /*if (is_string($data)) {
-            return true;
-        }*/
 
         $isOwner = null;
 
@@ -88,10 +76,6 @@ trait Portal
         if (is_null($action)) {
             return true;
         }
-
-        /*if (!isset($data->$action)) {
-            return false;
-        }*/
 
         $value = $data->get($action);
 
@@ -126,14 +110,13 @@ trait Portal
             if ($inAccount) {
                 return true;
             }
-            else {
-                if (is_null($isOwnContact) && $entity) {
-                    $isOwnContact = $this->checkIsOwnContact($user, $entity);
-                }
 
-                if ($isOwnContact) {
-                    return true;
-                }
+            if (is_null($isOwnContact) && $entity) {
+                $isOwnContact = $this->checkIsOwnContact($user, $entity);
+            }
+
+            if ($isOwnContact) {
+                return true;
             }
         }
 

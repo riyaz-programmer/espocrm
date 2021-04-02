@@ -29,10 +29,12 @@
 
 namespace Espo\Core\Acl;
 
+use Espo\Entities\User;
+
 /**
  * @todo Add methods.
  */
 interface ScopeAcl
 {
-
+    public function checkScope(User $user, ScopeData $data, ?string $action = null) : bool;
 }
