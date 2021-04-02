@@ -51,6 +51,10 @@ class Acl implements ScopeAcl, EntityAcl
 
     protected const ATTR_ASSIGNED_USERS_IDS = 'assignedUsersIds';
 
+    protected const ATTR_ASSIGNED_TEAMS_IDS = 'teamsIds';
+
+    protected const FIELD_TEAMS = 'teams';
+
     protected const FIELD_ASSIGNED_USERS = 'assignedUsers';
 
     protected $scope;
@@ -182,19 +186,25 @@ class Acl implements ScopeAcl, EntityAcl
      */
     public function checkIsOwner(User $user, Entity $entity)
     {
-        if ($entity->hasAttribute('assignedUserId')) {
-            if ($entity->has('assignedUserId') && $user->id === $entity->get('assignedUserId')) {
+        if ($entity->hasAttribute(self::ATTR_ASSIGNED_USER_ID)) {
+            if (
+                $entity->has(self::ATTR_ASSIGNED_USER_ID) &&
+                $user->getId() === $entity->get(self::ATTR_ASSIGNED_USER_ID)
+            ) {
                 return true;
             }
         }
-        else if ($entity->hasAttribute('createdById')) {
-            if ($entity->has('createdById') && $user->id === $entity->get('createdById')) {
+        else if ($entity->hasAttribute(self::ATTR_CREATED_BY_ID)) {
+            if (
+                $entity->has(self::ATTR_CREATED_BY_ID) &&
+                $user->getId() === $entity->get(self::ATTR_CREATED_BY_ID)
+            ) {
                 return true;
             }
         }
 
-        if ($entity->hasLinkMultipleField('assignedUsers')) {
-            if ($entity->hasLinkMultipleId('assignedUsers', $user->id)) {
+        if ($entity->hasLinkMultipleField(self::FIELD_ASSIGNED_USERS)) {
+            if ($entity->hasLinkMultipleId(self::FIELD_ASSIGNED_USERS, $user->getId())) {
                 return true;
             }
         }
@@ -207,13 +217,13 @@ class Acl implements ScopeAcl, EntityAcl
      */
     public function checkInTeam(User $user, Entity $entity)
     {
-        $userTeamIdList = $user->getLinkMultipleIdList('teams');
+        $userTeamIdList = $user->getLinkMultipleIdList(self::FIELD_TEAMS);
 
-        if (!$entity->hasRelation('teams') || !$entity->hasAttribute('teamsIds')) {
+        if (!$entity->hasRelation(self::FIELD_TEAMS) || !$entity->hasAttribute(self::ATTR_ASSIGNED_TEAMS_IDS)) {
             return false;
         }
 
-        $entityTeamIdList = $entity->getLinkMultipleIdList('teams');
+        $entityTeamIdList = $entity->getLinkMultipleIdList(self::FIELD_TEAMS);
 
         if (empty($entityTeamIdList)) {
             return false;
@@ -244,22 +254,22 @@ class Acl implements ScopeAcl, EntityAcl
 
         if (
             !$this->config->get('aclAllowDeleteCreated') ||
-            !$entity->has('createdById') ||
-            !$entity->get('createdById') !== $user->getId()
+            !$entity->has(self::ATTR_CREATED_BY_ID) ||
+            !$entity->get(self::ATTR_CREATED_BY_ID) !== $user->getId()
         ) {
             return false;
         }
 
         $isDeletedAllowed = false;
 
-        if (!$entity->has('assignedUserId')) {
+        if (!$entity->has(self::ATTR_ASSIGNED_USER_ID)) {
             $isDeletedAllowed = true;
         }
         else {
-            if (!$entity->get('assignedUserId')) {
+            if (!$entity->get(self::ATTR_ASSIGNED_USER_ID)) {
                 $isDeletedAllowed = true;
             }
-            else if ($entity->get('assignedUserId') === $entity->get('createdById')) {
+            else if ($entity->get(self::ATTR_ASSIGNED_USER_ID) === $entity->get(self::ATTR_CREATED_BY_ID)) {
                 $isDeletedAllowed = true;
             }
         }
