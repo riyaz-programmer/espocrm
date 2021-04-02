@@ -30,6 +30,8 @@
 namespace Espo\AclPortal;
 
 use Espo\Entities\User as EntityUser;
+use Espo\Entities\Note;
+
 use Espo\ORM\Entity;
 
 use Espo\Core\{
@@ -65,15 +67,12 @@ class Attachment extends Acl
         }
 
         if ($parent->getEntityType() === 'Note') {
-            if (!$parent->get('parentId') || !$parent->get('parentType')) {
-                return false; // check this
+            $result = $this->checkEntityReadNotParent($user, $parent);
+
+            if ($result !== null) {
+                return $result;
             }
 
-            $parentOfParent = $this->entityManager->getEntity($parent->get('parentType'), $parent->get('parentId'));
-
-            if ($parentOfParent && $this->aclManager->checkEntity($user, $parentOfParent)) {
-                return true;
-            }
         }
         else if ($this->aclManager->checkEntity($user, $parent)) {
             return true;
@@ -84,6 +83,47 @@ class Attachment extends Acl
         }
 
         return false;
+    }
+
+    protected function checkEntityReadNotParent(EntityUser $user, Note $note): ?bool
+    {
+        if ($note->get('targetType') === 'portals') {
+            $intersect = array_intersect(
+                $note->getLinkMultipleIdList('portals'),
+                $user->getLinkMultipleIdList('portals')
+            );
+
+            if (count($intersect)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        if ($note->get('targetType') === 'users') {
+            $isRelated = $this->entityManager
+                ->getRDBRepository('Note')
+                ->getRelation($note, 'users')
+                ->isRelated($user);
+
+            if ($isRelated) {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (!$note->get('parentId') || !$note->get('parentType')) {
+            return null;
+        }
+
+        $parent = $this->entityManager->getEntity($note->get('parentType'), $note->get('parentId'));
+
+        if ($parent && $this->aclManager->checkEntity($user, $parent)) {
+            return true;
+        }
+
+        return null;
     }
 
     public function checkIsOwner(EntityUser $user, Entity $entity)
